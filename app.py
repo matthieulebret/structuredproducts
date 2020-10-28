@@ -12,6 +12,8 @@ from datetime import date, timedelta
 import xlrd
 
 
+st.beta_set_page_config('Structured products',layout='wide')
+
 st.title('Structured products follow up tool')
 
 tradedate = datetime.date(2020,9,2)
@@ -132,6 +134,11 @@ def highlight_trigger(x):
         color=''
     return 'background-color: %s'% color
 
+def color_negative_red(val):
+    color = 'red' if val < 0 else 'green'
+    return 'color: %s' % color
+
+
 st.table(triggerdf.style.applymap(highlight_trigger)
     .format('{:.4f}',subset=['Max price','KnockOut','Min price','KnockIn']))
 
@@ -139,7 +146,7 @@ st.table(triggerdf.style.applymap(highlight_trigger)
 st.header('Underlying variation over time')
 
 with st.beta_expander('Show variations'):
-    st.table(dailyclose.pct_change(-1).head(5).style.format('{:.2%}'))
+    st.table(dailyclose.pct_change(-1).head(5).style.format('{:.2%}').applymap(color_negative_red))
 
 with st.beta_expander('Show prices'):
     st.table(dailyclose.head(5).style.format('{:.2f}'))
