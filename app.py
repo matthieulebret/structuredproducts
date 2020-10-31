@@ -12,7 +12,7 @@ from datetime import date, timedelta
 import xlrd
 
 
-st.beta_set_page_config('Structured products',layout='wide')
+st.set_page_config('Structured products',layout='wide')
 
 st.title('Structured products follow up tool')
 
@@ -50,9 +50,9 @@ for ticker in tickers:
     pricelist = ticker.history(start='2020-09-16')['Close']
     prices.append(pricelist)
 
+# st.write(pd.DataFrame(prices).transpose())
 
-
-dailyclose = pd.DataFrame([prices[i] for i in range(4)]).transpose()
+dailyclose = pd.DataFrame(prices).transpose()
 dailyclose.columns = stocklist
 dailyclose = dailyclose[::-1]
 dailyclose.reset_index(inplace=True)
