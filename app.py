@@ -145,15 +145,30 @@ st.table(triggerdf.style.applymap(highlight_trigger)
 
 st.header('Underlying variation over time')
 
-with st.beta_expander('Show variations'):
+dailyclose.iloc[-1] = fixings
+pricechange = dailyclose / dailyclose.iloc[-1] - 1
+
+def highlight_change(x):
+    if x >-0.02:
+        color='lightgreen'
+    else:
+        color='lightred'
+    return 'background-color: %s'% color
+
+
+
+with st.beta_expander('Show daily variation'):
     st.table(dailyclose.pct_change(-1).head(5).style.format('{:.2%}').applymap(color_negative_red))
+
+with st.beta_expander('Show variation since inception'):
+    st.subheader('Stock performance')
+    st.table(pricechange.head(10).style
+        .format('{:.2%}',subset=stocklist)
+        .applymap(highlight_change,subset=stocklist))
 
 with st.beta_expander('Show prices'):
     st.table(dailyclose.head(5).style.format('{:.2f}'))
 
-dailyclose.iloc[-1] = fixings
-
-pricechange = dailyclose / dailyclose.iloc[-1] - 1
 
 
 pricechange.reset_index(inplace=True)
@@ -186,20 +201,9 @@ fig.update_layout(template='ggplot2',xaxis=dict(tickmode='array',tickvals=pricec
 
 st.plotly_chart(fig,use_container_width=True)
 
-def highlight_change(x):
-    if x >-0.02:
-        color='lightgreen'
-    else:
-        color='lightred'
-    return 'background-color: %s'% color
 
 pricechange.set_index('Date',inplace=True)
 
-with st.beta_expander('Show data'):
-    st.subheader('Stock performance')
-    st.table(pricechange.head(10).style
-        .format('{:.2%}',subset=stocklist)
-        .applymap(highlight_change,subset=stocklist))
 
 with st.beta_expander('Adjust parameters'):
     stopflag = st.checkbox('Accrual stops')
