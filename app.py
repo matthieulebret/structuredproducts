@@ -48,7 +48,7 @@ daim = yf.Ticker('DAI.DE')
 tickers = [s,ca,inf,daim]
 prices = []
 for ticker in tickers:
-    pricelist = ticker.history(start='2021-07-05')['Close']
+    pricelist = ticker.history(start='2021-07-07')['Close']
     prices.append(pricelist)
 
 
@@ -56,6 +56,8 @@ dailyclose = pd.DataFrame(prices).transpose()
 dailyclose.columns = stocklist
 dailyclose = dailyclose[::-1]
 dailyclose.reset_index(inplace=True)
+
+
 dailyclose['Date']=dailyclose['Date'].apply(lambda x: datetime.date(x.year,x.month,x.day))
 dailyclose.set_index('Date',inplace=True)
 
@@ -148,6 +150,7 @@ st.header('Underlying variation over time')
 dailyclose.iloc[-1] = fixings
 pricechange = dailyclose / dailyclose.iloc[-1] - 1
 
+
 def highlight_change(x):
     if x >-0.02:
         color='lightgreen'
@@ -172,7 +175,6 @@ with st.beta_expander('Show prices'):
 
 
 pricechange.reset_index(inplace=True)
-
 
 pricechange['Trading Day'] = [i+1 for i in range(len(pricechange))][::-1]
 for stock in stocklist:
