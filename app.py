@@ -48,7 +48,7 @@ daim = yf.Ticker('DAI.DE')
 tickers = [s,ca,inf,daim]
 prices = []
 for ticker in tickers:
-    pricelist = ticker.history(start='2021-07-07')['Close']
+    pricelist = ticker.history(start='2021-07-06')['Close']
     prices.append(pricelist)
 
 
