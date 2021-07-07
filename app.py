@@ -12,45 +12,45 @@ from datetime import date, timedelta
 import xlrd
 
 
+
 st.set_page_config('Structured products',layout='wide')
 
 st.title('Structured products follow up tool')
 
-tradedate = datetime.date(2020,9,2)
-valuedate = datetime.date(2020,9,16)
+tradedate = datetime.date(2021,6,22)
+valuedate = datetime.date(2021,7,6)
 days_in_month = calendar.monthrange(valuedate.year,valuedate.month)[1]
 memkostart = valuedate + timedelta(days=days_in_month)
-fixingdate = datetime.date(2021,9,16)
+fixingdate = datetime.date(2022,7,6)
 
 
 dates = pd.DataFrame([tradedate,valuedate,memkostart,fixingdate],index=['Trade date','Value date','KO Memory start date','Fixing date'])
 dates.columns = ['Key dates']
 
-valuedate = datetime.date(2020,9,17)
+valuedate = datetime.date(2021,7,6)
 
-stocklist = ['Citi','JPMorgan','Bank of America','Bank of NY Mellon']
-strikes = [43.3585,84.813,21.7005,31.569]
-fixings = [strike / 0.85 for strike in strikes]
-knockouts = [fixing * 0.98 for fixing in fixings]
-knockins = [strike * 0.65 / 0.85 for strike in strikes]
+stocklist = ['Shell','Credit Agricole','Infineon','Daimler']
+strikes = [1038.6,8.9357,24.4494,59.3925]
+fixings = [strike / 0.75 for strike in strikes]
+knockouts = [fixing * 0.97 for fixing in fixings]
+knockins = [strike * 0.60 / 0.75 for strike in strikes]
 
 summarydf = pd.DataFrame([knockouts,knockins,strikes,fixings],index=['KnockOut','KnockIn','Strike','Trade price'])
 summarydf.columns = stocklist
 
 
-c = yf.Ticker('C')
-jp = yf.Ticker('JPM')
-bac = yf.Ticker('BAC')
-bony = yf.Ticker('BK')
+s = yf.Ticker('RDSB.L')
+ca = yf.Ticker('ACA.PA')
+inf = yf.Ticker('IFX.DE')
+daim = yf.Ticker('DAI.DE')
 
 
-tickers = [c,jp,bac,bony]
+tickers = [s,ca,inf,daim]
 prices = []
 for ticker in tickers:
-    pricelist = ticker.history(start='2020-09-16')['Close']
+    pricelist = ticker.history(start='2021-07-06')['Close']
     prices.append(pricelist)
 
-# st.write(pd.DataFrame(prices).transpose())
 
 dailyclose = pd.DataFrame(prices).transpose()
 dailyclose.columns = stocklist
@@ -74,7 +74,7 @@ with st.beta_expander('Display key information'):
     col1,col2 = st.beta_columns(2)
 
     with col1:
-        st.subheader('Coupon rate = 8.96%')
+        st.subheader('Coupon rate = 8.9%')
 
     with col2:
         st.subheader('Key Dates')
@@ -84,7 +84,7 @@ with st.beta_expander('Display key information'):
     st.table(summarydf.style.format('{:.4f}'))
     st.subheader('Dividends')
     st.table(divdf)
-    triggerstart = st.date_input('Input first observation date',datetime.date(2020,10,16))
+    triggerstart = st.date_input('Input first observation date',datetime.date(2021,8,6))
 
 
 ### Triggers
@@ -208,7 +208,7 @@ pricechange.set_index('Date',inplace=True)
 with st.beta_expander('Adjust parameters'):
     stopflag = st.checkbox('Accrual stops')
     if stopflag:
-        stopaccrual = st.date_input('Stop accrual',datetime.date(2020,10,16))
+        stopaccrual = st.date_input('Stop accrual',datetime.date(2021,8,6))
         d1 = stopaccrual
     else:
         d1 = datetime.date.today()
@@ -219,12 +219,12 @@ with st.beta_expander('Adjust parameters'):
     kiflag = st.checkbox('Knock In triggered')
 
 if kiflag == False:
-    accrual = nbdays*100000*0.0896/360
-elif pricechange[stocklist].iloc[0].min() <= 0.65:
-    accrual = nbdays*100000*0.0896/360 + pricechange[stocklist].iloc[0].min()*100000
+    accrual = nbdays*100000*0.089/360
+elif pricechange[stocklist].iloc[0].min() <= 0.6:
+    accrual = nbdays*100000*0.089/360 + pricechange[stocklist].iloc[0].min()*100000
 else:
-    accrual = nbdays*100000*0.0896/360
+    accrual = nbdays*100000*0.089/360
 
-accrualmessage = 'Product income since inception = '+'{:.2f}'.format(accrual)+' USD'
+accrualmessage = 'Product income since inception = '+'{:.2f}'.format(accrual)+' SGD'
 
 st.subheader(accrualmessage)
