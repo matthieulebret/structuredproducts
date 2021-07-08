@@ -152,7 +152,7 @@ pricechange = dailyclose / dailyclose.iloc[-1] - 1
 
 
 def highlight_change(x):
-    if x >-0.02:
+    if x >-0.03:
         color='lightgreen'
     else:
         color='lightred'
@@ -188,8 +188,8 @@ fig.add_shape(
         type='line',
         x0=1,
         x1=len(pricechange),
-        y0=-0.02,
-        y1=-0.02,
+        y0=-0.03,
+        y1=-0.03,
         line=dict(color='MediumPurple',
             width=4,
             dash='dot'))
