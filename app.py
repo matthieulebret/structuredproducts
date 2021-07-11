@@ -11,8 +11,6 @@ import calendar
 from datetime import date, timedelta
 import xlrd
 
-
-
 st.set_page_config('Structured products',layout='wide')
 
 st.title('Structured products follow up tool')
@@ -39,24 +37,42 @@ summarydf = pd.DataFrame([knockouts,knockins,strikes,fixings],index=['KnockOut',
 summarydf.columns = stocklist
 
 
+# import tiingo
+# from tiingo import TiingoClient
+# client = TiingoClient({'api_key':'d46dab09d516795de4b3446eaf655c9607e3ffd8'})
+#
+# stocklist = ['RDSB:LN','ACA:PA','IFX:DE','DAI:DE']
+#
+#
+# historical_prices = client.get_dataframe(stocklist,frequency='daily',startDate='2021-07-06',metric_name='close')
+#
+# historical_prices
+
+
 s = yf.Ticker('RDSB.L')
 ca = yf.Ticker('ACA.PA')
 inf = yf.Ticker('IFX.DE')
 daim = yf.Ticker('DAI.DE')
 
-
 tickers = [s,ca,inf,daim]
+
 prices = []
 for ticker in tickers:
-    pricelist = ticker.history(start='2021-07-06')['Close']
-    prices.append(pricelist)
+    try:
+        pricelist = ticker.history(start='2021-07-06',prepost=True)['Close']
+        prices.append(pricelist)
+    except:
+        prices.append('N/A')
+
 
 
 dailyclose = pd.DataFrame(prices).transpose()
+
 dailyclose.columns = stocklist
+
+
 dailyclose = dailyclose[::-1]
 dailyclose.reset_index(inplace=True)
-
 
 dailyclose['Date']=dailyclose['Date'].apply(lambda x: datetime.date(x.year,x.month,x.day))
 dailyclose.set_index('Date',inplace=True)
