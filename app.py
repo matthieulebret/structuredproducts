@@ -35,10 +35,10 @@ stocklist = ['Shell','Credit Agricole','Infineon','Daimler']
 strikes = [1038.6,8.9357,24.4494,59.3925]
 fixings = [strike / 0.75 for strike in strikes[::-1]]
 knockouts = [fixing * 0.97 for fixing in fixings]
-knockins = [strike * 0.60 / 0.75 for strike in strikes]
+knockins = [strike * 0.60 / 0.75 for strike in strikes[::-1]]
 
 summarydf = pd.DataFrame([knockouts,knockins,strikes,fixings],index=['KnockOut','KnockIn','Strike','Trade price'])
-summarydf.columns = stocklist
+summarydf.columns = stocklist[::-1]
 
 ### Boursorama ###
 
