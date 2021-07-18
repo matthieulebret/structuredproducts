@@ -4,6 +4,10 @@ import plotly.graph_objs as go
 
 import yfinance as yf
 
+import altair as alt
+import time
+import requests
+
 import numpy as np
 import pandas as pd
 import datetime
@@ -29,63 +33,95 @@ valuedate = datetime.date(2021,7,6)
 
 stocklist = ['Shell','Credit Agricole','Infineon','Daimler']
 strikes = [1038.6,8.9357,24.4494,59.3925]
-fixings = [strike / 0.75 for strike in strikes]
+fixings = [strike / 0.75 for strike in strikes[::-1]]
 knockouts = [fixing * 0.97 for fixing in fixings]
 knockins = [strike * 0.60 / 0.75 for strike in strikes]
 
 summarydf = pd.DataFrame([knockouts,knockins,strikes,fixings],index=['KnockOut','KnockIn','Strike','Trade price'])
 summarydf.columns = stocklist
 
+### Boursorama ###
 
-# import tiingo
-# from tiingo import TiingoClient
-# client = TiingoClient({'api_key':'d46dab09d516795de4b3446eaf655c9607e3ffd8'})
+names = ['Shell','Credit Agricole','Infineon','Daimler']
+
+@st.cache(suppress_st_warning=True,ttl=3600,allow_output_mutation=True)
+def getprices():
+    tickers = ['1uRDSB.L','1rPACA','1zIFX','1zDAI']
+
+
+    bigdf = pd.DataFrame()
+
+    for ticker in tickers:
+        time.sleep(2)
+        url = 'https://www.boursorama.com/bourse/action/graph/ws/GetTicksEOD?symbol='+ticker+'&length=365&period=0&guid='
+
+
+        data = requests.get(url)
+        df = pd.DataFrame(data.json()).loc['QuoteTab','d']
+        df = pd.DataFrame.from_dict(df)
+
+        def dayfromnumber(string):
+            date = datetime.datetime.fromordinal(string)
+            try:
+                date = datetime.datetime(date.year+1969,date.month,date.day+1)
+            except:
+                date = datetime.datetime(date.year+1969,date.month,28)
+            return date
+
+        df['date'] = df['d'].apply(dayfromnumber)
+        df[ticker] = df['c']
+        df = df[[ticker,'date']]
+
+        bigdf = pd.concat([df,bigdf])
+
+
+    bigdf = bigdf.groupby('date').mean()
+
+    return bigdf
+
+# st.stop()
 #
-# stocklist = ['RDSB:LN','ACA:PA','IFX:DE','DAI:DE']
+# s = yf.Ticker('RDSB.L')
+# ca = yf.Ticker('ACA.PA')
+# inf = yf.Ticker('IFX.DE')
+# daim = yf.Ticker('DAI.DE')
+#
+# tickers = [s,ca,inf,daim]
+#
+# prices = []
+# for ticker in tickers:
+#     try:
+#         pricelist = ticker.history(start='2021-07-06',prepost=True)['Close']
+#         prices.append(pricelist)
+#     except:
+#         prices.append(0)
 #
 #
-# historical_prices = client.get_dataframe(stocklist,frequency='daily',startDate='2021-07-06',metric_name='close')
 #
-# historical_prices
+# dailyclose = pd.DataFrame(prices).transpose()
+#
+# dailyclose.columns = stocklist
+#
+#
+# dailyclose = dailyclose[::-1]
+# dailyclose.reset_index(inplace=True)
+#
+# dailyclose['Date']=dailyclose['Date'].apply(lambda x: datetime.date(x.year,x.month,x.day))
+# dailyclose.set_index('Date',inplace=True)
 
+dailyclose = getprices()
 
-s = yf.Ticker('RDSB.L')
-ca = yf.Ticker('ACA.PA')
-inf = yf.Ticker('IFX.DE')
-daim = yf.Ticker('DAI.DE')
-
-tickers = [s,ca,inf,daim]
-
-prices = []
-for ticker in tickers:
-    try:
-        pricelist = ticker.history(start='2021-07-06',prepost=True)['Close']
-        prices.append(pricelist)
-    except:
-        prices.append('N/A')
-
-
-
-dailyclose = pd.DataFrame(prices).transpose()
-
-dailyclose.columns = stocklist
-
-
-dailyclose = dailyclose[::-1]
-dailyclose.reset_index(inplace=True)
-
-dailyclose['Date']=dailyclose['Date'].apply(lambda x: datetime.date(x.year,x.month,x.day))
-dailyclose.set_index('Date',inplace=True)
+dailyclose.columns=names[::-1]
 
 
 # Dividends
 
-dividends = []
-for ticker in tickers:
-    dividend = ticker.dividends
-    dividends.append(dividend)
-divdf = pd.DataFrame([dividends[i] for i in range(4)]).transpose()
-divdf.columns = stocklist
+# dividends = []
+# for ticker in tickers:
+#     dividend = ticker.dividends
+#     dividends.append(dividend)
+# divdf = pd.DataFrame([dividends[i] for i in range(4)]).transpose()
+# divdf.columns = stocklist
 
 with st.beta_expander('Display key information'):
 
@@ -100,8 +136,8 @@ with st.beta_expander('Display key information'):
 
     st.subheader('Key information')
     st.table(summarydf.style.format('{:.4f}'))
-    st.subheader('Dividends')
-    st.table(divdf)
+    # st.subheader('Dividends')
+    # st.table(divdf)
     triggerstart = st.date_input('Input first observation date',datetime.date(2021,8,6))
 
 
@@ -109,7 +145,17 @@ with st.beta_expander('Display key information'):
 
 st.header('Triggers met')
 
+dailyclose.reset_index(inplace=True)
+
+dailyclose['date'] = dailyclose['date'].apply(lambda x: datetime.date(x.year,x.month,x.day))
+
+
+dailyclose.set_index('date',inplace=True)
+
 dailyclosefilter = dailyclose[dailyclose.index>=triggerstart]
+
+dailyclose = dailyclose[dailyclose.index>=datetime.date(2021,7,6)]
+dailyclose = dailyclose[::-1]
 
 maxprice = pd.DataFrame(dailyclosefilter.max())
 maxprice.columns=['Max price']
@@ -163,15 +209,14 @@ st.table(triggerdf.style.applymap(highlight_trigger)
 
 st.header('Underlying variation over time')
 
-dailyclose.iloc[-1] = fixings
-pricechange = dailyclose / dailyclose.iloc[-1] - 1
+pricechange = dailyclose / fixings -1
 
 
 def highlight_change(x):
     if x >-0.03:
         color='lightgreen'
     else:
-        color='lightred'
+        color='red'
     return 'background-color: %s'% color
 
 
@@ -189,38 +234,41 @@ with st.beta_expander('Show prices'):
     st.table(dailyclose.head(5).style.format('{:.2f}'))
 
 
-
 pricechange.reset_index(inplace=True)
 
-pricechange['Trading Day'] = [i+1 for i in range(len(pricechange))][::-1]
-for stock in stocklist:
-    pricechange[stock] = pd.to_numeric(pricechange[stock])
 
-maxchg = pricechange[stocklist].to_numpy().max()+0.03
-minchg = pricechange[stocklist].to_numpy().min()-0.03
+# pricechange['Trading Day'] = [i+1 for i in range(len(pricechange))][::-1]
+# for stock in stocklist:
+#     pricechange[stock] = pd.to_numeric(pricechange[stock])
+#
+# maxchg = pricechange[stocklist].to_numpy().max()+0.03
+# minchg = pricechange[stocklist].to_numpy().min()-0.03
+#
+# fig = px.line(pricechange,x='date',y=[stock for stock in stocklist])
+#
+# fig.update_xaxes(rangeslider_visible=True,showgrid=True,gridcolor='LightPink')
+# fig.update_yaxes(range=[minchg,maxchg],showgrid=True,gridcolor='LightPink',title='Variation')
+# fig.update_traces(mode='lines+markers')
+# fig.update_layout(template='ggplot2',xaxis=dict(tickmode='array',tickvals=pricechange['date'],dtick=1,ticktext=[str(date)[:10] for date in pricechange['date']]),yaxis_tickformat='.2%',legend=dict(orientation='h',title='Stock'))
+# st.plotly_chart(fig,use_container_width=True)
 
-fig = px.line(pricechange,x='Trading Day',y=[stock for stock in stocklist])
-fig.add_shape(
-        type='line',
-        x0=1,
-        x1=len(pricechange),
-        y0=-0.03,
-        y1=-0.03,
-        line=dict(color='MediumPurple',
-            width=4,
-            dash='dot'))
+pricechange.set_index('date',inplace=True)
+pricechange = pd.DataFrame(pricechange).stack()
 
-
-fig.update_xaxes(rangeslider_visible=True,showgrid=True,gridcolor='LightPink')
-fig.update_yaxes(range=[minchg,maxchg],showgrid=True,gridcolor='LightPink',title='Variation')
-fig.update_traces(mode='lines+markers')
-fig.update_layout(template='ggplot2',xaxis=dict(tickmode='array',tickvals=pricechange['Trading Day'],dtick=1,ticktext=[str(date)[:10] for date in pricechange['Date']]),yaxis_tickformat='.2%',legend=dict(orientation='h',title='Stock'))
+pricechange = pd.DataFrame(pricechange).reset_index()
+pricechange.columns = ['date','Stock','Variation']
 
 
-st.plotly_chart(fig,use_container_width=True)
 
+highlight = alt.selection(type='interval',bind='scales',encodings=['x','y'])
 
-pricechange.set_index('Date',inplace=True)
+fig = alt.Chart(pricechange).mark_line().encode(alt.X('date:T'),alt.Y('Variation:Q',scale=alt.Scale(domain=(-0.15,0.05)),axis=alt.Axis(format='.2%')),color='Stock:N',tooltip=[
+      {"type": "temporal", "field": "date"},
+      {"type": "quantitative", "field": "Variation"},
+      {"type": "nominal", "field": "Stock"}]).add_selection(highlight)
+line1 = alt.Chart(pd.DataFrame({'Variation':[-0.03]})).mark_rule(strokeDash=[10,10]).encode(y='Variation')
+
+st.altair_chart(fig+line1,use_container_width=True)
 
 
 with st.beta_expander('Adjust parameters'):
