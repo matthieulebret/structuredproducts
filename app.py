@@ -266,7 +266,7 @@ fig = alt.Chart(pricechange).mark_line().encode(alt.X('date:T'),alt.Y('Variation
       {"type": "temporal", "field": "date"},
       {"type": "quantitative", "field": "Variation"},
       {"type": "nominal", "field": "Stock"}]).add_selection(highlight)
-line1 = alt.Chart(pd.DataFrame({'Variation':[-0.03]})).mark_rule(strokeDash=[10,10]).encode(y='Variation')
+line1 = alt.Chart(pd.DataFrame({'Variation':[-0.03]})).mark_rule(strokeDash=[10,10],color='green',strokeWidth=2).encode(y='Variation')
 
 st.altair_chart(fig+line1,use_container_width=True)
 
